@@ -4,6 +4,7 @@ from rich import print
 import json
 import os
 import re
+from pathlib import Path
 
 # 依赖安装，命令行执行以下命令
 # pip install playwright
@@ -26,20 +27,20 @@ async def handle_special_block_urls_keywords(route, request):
     #
     for keyword in block_urls_keywords:
         if keyword in request.url:
-            # await route.abort()
+            await route.abort()
             # print(f"Blocked: {request.url}")
-            await route.continue_()
+            # await route.continue_()
         else:
             await route.continue_()
 
 
-async def print_aweme_responses():
+async def print_aweme_responses() -> tuple[str, str, str]:
     async with async_playwright() as p:
         isloaded = False
         # headless=False 会打开浏览器
         # headless=True 不会打开浏览器
         browser = await p.firefox.launch(
-            headless=False,
+            headless=True,
             args=[
                 # "--incognito",  # 隐身模式
                 # "--disable-gpu",  # 禁用 GPU 硬件加速
@@ -110,6 +111,7 @@ async def print_aweme_responses():
             name_tag = await page.query_selector(
                 "#douyin-right-container > div.parent-route-container.route-scroll-container.IhmVuo1S > div > div > div > div.a3i9GVfe.nZryJ1oM._6lTeZcQP.y5Tqsaqg > div.IGPVd8vQ > div.HjcJQS1Z > h1 > span > span > span > span > span > span"
             )
+            name = ""
             if name_tag:
                 name = await name_tag.inner_text()
                 print(f"用户昵称: {name}")
@@ -135,7 +137,11 @@ async def print_aweme_responses():
             await context.storage_state(path="state.json")
 
             await browser.close()
-            return jsons
+            return (
+                jsons,
+                douyin_number if isinstance(douyin_number, str) else str(douyin_number),
+                name,
+            )
         except Exception as e:
             print(f"Error: {e}")
             await browser.close()
@@ -146,6 +152,7 @@ async def print_aweme_responses():
                 if acf == "y":
                     print("删除state.json")
                     os.remove("state.json")
+            print("重试")
             await print_aweme_responses()
             print("退出")
 
@@ -166,13 +173,14 @@ def par_jsons(jsons: list) -> int:
 
 
 if __name__ == "__main__":
-    jsons = asyncio.run(print_aweme_responses())
-    with open("aweme.json", "w", encoding="UTF-8") as f:
+    jsons, douyin_number, name = asyncio.run(print_aweme_responses())
+    save_path = Path(f"data/{name}_{douyin_number}/aweme.json")
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(save_path, "w", encoding="UTF-8") as f:
         json.dump(jsons, f, indent=4, ensure_ascii=False)
     load_json_objs = []
-    with open("aweme.json", "r", encoding="UTF-8") as f:
-        load_json_objs = json.load(f)
-
+    # with open(save_path, "r", encoding="UTF-8") as f:
+    #     load_json_objs = json.load(f)
     load_json_objs = jsons
     aweme_lists = [
         obj.get("aweme_list") for obj in load_json_objs if obj.get("aweme_list")

@@ -11,9 +11,6 @@ from pathlib import Path
 # playwright install firefox
 # pip install rich
 
-# 用户主页链接
-test_url = "https://www.douyin.com/user/MS4wLjABAAAAnH5exW9sbuKNUVck8jWI6ajeA68coGy2fQ1lR5XOARk?from_tab_name=main"
-
 
 async def handle_route_banimg_and_media(route, request):
     if request.resource_type in ["image", "media"]:
@@ -34,7 +31,7 @@ async def handle_special_block_urls_keywords(route, request):
             await route.continue_()
 
 
-async def print_aweme_responses() -> tuple[str, str, str]:
+async def print_aweme_responses(test_url) -> tuple[str, str, str]:
     async with async_playwright() as p:
         isloaded = False
         # headless=False 会打开浏览器
@@ -173,6 +170,8 @@ def par_jsons(jsons: list) -> int:
 
 
 if __name__ == "__main__":
+    # 用户主页链接
+    test_url = "https://www.douyin.com/user/MS4wLjABAAAAnH5exW9sbuKNUVck8jWI6ajeA68coGy2fQ1lR5XOARk?from_tab_name=main"
     jsons, douyin_number, name = asyncio.run(print_aweme_responses())
     save_path = Path(f"data/{name}_{douyin_number}/aweme.json")
     save_path.parent.mkdir(parents=True, exist_ok=True)
@@ -185,7 +184,6 @@ if __name__ == "__main__":
     aweme_lists = [
         obj.get("aweme_list") for obj in load_json_objs if obj.get("aweme_list")
     ]
-
     video_informations = set(
         [
             (aweme.get("aweme_id"), aweme.get("desc"))

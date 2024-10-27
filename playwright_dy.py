@@ -32,13 +32,17 @@ async def handle_special_block_urls_keywords(route, request):
             await route.continue_()
 
 
-async def print_aweme_responses(user_home_url) -> tuple[str, str, str]:
+async def print_aweme_responses(
+    user_home_url, headless: bool = None
+) -> tuple[str, str, str]:
     async with async_playwright() as p:
         isloaded = True if os.path.exists("state.json") else False
         # headless=False 会打开浏览器
         # headless=True 不会打开浏览器
         browser = await p.firefox.launch(
-            headless=True if isloaded else False,
+            headless=(
+                headless if headless is not None else (True if isloaded else False)
+            ),
             args=[
                 # "--incognito",  # 隐身模式
                 # "--disable-gpu",  # 禁用 GPU 硬件加速
@@ -179,9 +183,11 @@ def par_jsons(jsons: list) -> int:
 
 
 def save_user_videos_aneme_jsonobjs(
-    user_home_url: str, data_save_dir: str = "data"
+    user_home_url: str, data_save_dir: str = "data", headless: bool = None
 ) -> tuple[str, str, str]:
-    jsons, douyin_number, name = asyncio.run(print_aweme_responses(user_home_url))
+    jsons, douyin_number, name = asyncio.run(
+        print_aweme_responses(user_home_url, headless)
+    )
     save_path = Path(f"{data_save_dir}/{name}_{douyin_number}/aweme.json")
     save_path.parent.mkdir(parents=True, exist_ok=True)
     with open(save_path, "w", encoding="UTF-8") as f:

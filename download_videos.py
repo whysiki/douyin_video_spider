@@ -44,15 +44,23 @@ def async_download_retry_decorator(func):
                 )
                 await asyncio.sleep(random.randint(1, 5))
 
-                if kwargs and "session" in kwargs:
-                    if isinstance(kwargs["session"], aiohttp.ClientSession):
-                        await kwargs["session"].close()
-                    kwargs["session"] = aiohttp.ClientSession()
-                    Console().print(
-                        f"\n{func.__name__} session has been reset\n",
-                        style="bold green",
-                    )
-        if kwargs and "file_save_path" in kwargs:
+                if (i + 1) % 3 == 0:  # 重置session,三次重试一次
+                    if kwargs and "session" in kwargs:
+                        if (
+                            isinstance(kwargs["session"], aiohttp.ClientSession)
+                            and not kwargs["session"].closed
+                        ):
+                            await kwargs["session"].close()
+                        kwargs["session"] = aiohttp.ClientSession()
+                        Console().print(
+                            f"\n{func.__name__} session has been reset\n",
+                            style="bold green",
+                        )
+        if (
+            kwargs
+            and "file_save_path" in kwargs
+            and isinstance(kwargs["file_save_path"], (str, Path))
+        ):
             file_path = (
                 Path(kwargs["file_save_path"])
                 if isinstance(kwargs["file_save_path"], str)
@@ -67,12 +75,13 @@ def async_download_retry_decorator(func):
             kwargs
             and "session" in kwargs
             and isinstance(kwargs["session"], aiohttp.ClientSession)
-        ):
+        ) and not kwargs["session"].closed:
             await kwargs["session"].close()
             Console().print(
                 f"\n{func.__name__} session has been closed\n", style="bold green"
             )
-        raise last_exception
+        # raise last_exception
+        logger.error(f"Reached retry limit: {last_exception}")
 
     return wrapper
 
@@ -156,7 +165,12 @@ async def download_file_async(
                 f"Downloaded {file_path.name} to {file_path.parent.as_posix()}"
             )
     finally:
-        if not gived_session:
+        if (
+            not gived_session
+            and session
+            and isinstance(session, aiohttp.ClientSession)
+            and not session.closed
+        ):
             await session.close()
         if bar and isinstance(bar, tqdm):
             bar.close()
@@ -251,7 +265,11 @@ async def download_main(
             if download_num > 0 and download_num_count >= download_num:
                 break
     await asyncio.gather(*tasks)
-    await session.close()
+    if session and isinstance(session, aiohttp.ClientSession) and not session.closed:
+        await session.close()
+
+    print("\n\nDownload finished\n\n", style="bold green")
+    # Console().print("Download finished", style="bold green")
 
 
 async def add_download_tasks(

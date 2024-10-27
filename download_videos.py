@@ -25,7 +25,7 @@ def async_retry_decorator(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         last_exception = None
-        retry_times = 3
+        retry_times = 20
         for i in range(retry_times):
             try:
                 return await func(*args, **kwargs)
@@ -156,7 +156,7 @@ async def download_main(data_save_path: str | Path = "data"):
     )
     json_files_Generator = base_path.glob("**/*.json")
 
-    session = aiohttp.ClientSession()
+    session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=600))
     tasks = []
     for json_file in json_files_Generator:
         print(f"loading aweme json data: {json_file.as_posix()}")
@@ -192,10 +192,15 @@ async def download_main(data_save_path: str | Path = "data"):
 
                 print(f"视频id:{aweme_id}, 点赞数: {digg_count}, nickname: {nickname}")
 
+                # 下载视频文件，并使用视频描述 (desc) 作为文件名
+                desc = data.get("desc", "unknown_desc")
+                print(f"desc: {desc}")
+                sanitized_desc = sanitize_filename(desc)  # 清理不允许的字符
+
                 # 创建文件夹名称，添加格式化后的 digg_count
                 aweme_folder = (
                     json_file.parent
-                    / f"{digg_count}-{aweme_id}-{formatted_digg_count_str}"
+                    / f"{sanitized_desc}-{aweme_id}-{formatted_digg_count_str}"
                 )
 
                 # 创建各个子文件夹
@@ -223,10 +228,7 @@ async def download_main(data_save_path: str | Path = "data"):
                             print(
                                 f"added {index+1} cover_url download task: {cover_url}"
                             )
-                # 下载视频文件，并使用视频描述 (desc) 作为文件名
-                desc = data.get("desc", "unknown_desc")
-                print(f"desc: {desc}")
-                sanitized_desc = sanitize_filename(desc)  # 清理不允许的字符
+
                 #
                 video_obj = data.get("video", {})
                 if video_obj:

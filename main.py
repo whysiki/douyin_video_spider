@@ -12,7 +12,7 @@ user_home_page_urls = [
 # - f"data_dir"
 # - - f"{username}_{douyin_number}"
 # - - - aweme.json
-# - - - f"{digg_count}-{aweme_id}-{formatted_digg_count_str}"
+# - - - f"{sanitized_desc}-{aweme_id}-{formatted_digg_count_str}"
 # - - - - video
 # - - - - mp3
 # - - - - cover

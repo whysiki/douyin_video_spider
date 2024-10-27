@@ -16,7 +16,6 @@ from fake_useragent import UserAgent
 
 def sanitize_filename(filename: str):
     assert isinstance(filename, str), "filename must be a string"
-    """移除文件名中不允许的字符，包括换行符"""
     filename = filename.replace("\n", "").replace("\r", "")
     return re.sub(r'[\/:*?"<>|]', "_", filename)
 
@@ -61,6 +60,16 @@ async def download_file_async(
             "User-Agent": UserAgent().random,
             "Referer": "https://www.douyin.com/",
         }
+
+    assert isinstance(url, str), "url must be a string"
+    assert isinstance(file_save_path, str) or isinstance(
+        file_save_path, Path
+    ), "file_save_path must be a string or Path"
+    assert isinstance(headers, dict), "headers must be a dictionary"
+    assert isinstance(mix_size, int), "mix_size must be an integer"
+    assert (
+        isinstance(session, aiohttp.ClientSession) or session is None
+    ), "session must be an aiohttp.ClientSession or None"
 
     file_path = (
         Path(file_save_path) if isinstance(file_save_path, str) else file_save_path
@@ -137,9 +146,13 @@ def format_digg_count(digg_count: int | float) -> str:
     return str(digg_count)
 
 
-async def main():
-    base_path = Path("data")
-
+async def download_main(data_save_path: str | Path = "data"):
+    assert isinstance(data_save_path, str) or isinstance(
+        data_save_path, Path
+    ), "data_save_path must be a string or Path"
+    base_path = (
+        Path(data_save_path) if isinstance(data_save_path, str) else data_save_path
+    )
     json_files_Generator = base_path.glob("**/*.json")
 
     session = aiohttp.ClientSession()
@@ -272,15 +285,15 @@ async def main():
                         )
                         print(f"added image_url download task: {image_url}")
 
-                break  # 测试
+                # break  # 测试
 
-            break  # 测试
+            # break  # 测试
 
     await asyncio.gather(*tasks)
 
     await session.close()
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    asyncio.run(main())
+# asyncio.run(main())

@@ -65,6 +65,7 @@ async def print_aweme_responses(user_home_url) -> tuple[str, str, str]:
         )  # Union[Callable[[Route, Request], Any], Callable[[Route], Any]]
         if isloaded:
             page.route("**/*", handle_route_banimg_and_media)
+            page.route("**/*", handle_route_banimg_and_media)
         jsons = []
 
         async def handle_response(response):
@@ -171,24 +172,35 @@ def par_jsons(jsons: list) -> int:
     return len(video_informations)
 
 
-if __name__ == "__main__":
-    # 用户主页链接
-    user_home_url = "https://www.douyin.com/user/MS4wLjABAAAAnH5exW9sbuKNUVck8jWI6ajeA68coGy2fQ1lR5XOARk?from_tab_name=main"
+def save_user_videos_aneme_jsonobjs(
+    user_home_url: str, data_save_dir: str = "data"
+) -> tuple[str, str, str]:
     jsons, douyin_number, name = asyncio.run(print_aweme_responses(user_home_url))
-    save_path = Path(f"data/{name}_{douyin_number}/aweme.json")
+    save_path = Path(f"{data_save_dir}/{name}_{douyin_number}/aweme.json")
     save_path.parent.mkdir(parents=True, exist_ok=True)
     with open(save_path, "w", encoding="UTF-8") as f:
         json.dump(jsons, f, indent=4, ensure_ascii=False)
-    load_json_objs = jsons
-    aweme_lists = [
-        obj.get("aweme_list") for obj in load_json_objs if obj.get("aweme_list")
-    ]
-    video_informations = set(
-        [
-            (aweme.get("aweme_id"), aweme.get("desc"))
-            for aweme_list in aweme_lists
-            for aweme in aweme_list
-            if aweme.get("desc")
-        ]
-    )
-    print(video_informations, f"len: {len(video_informations)}")
+    return jsons, douyin_number, name
+
+
+# if __name__ == "__main__":
+#     # 用户主页链接
+#     user_home_url = "https://www.douyin.com/user/MS4wLjABAAAAnH5exW9sbuKNUVck8jWI6ajeA68coGy2fQ1lR5XOARk?from_tab_name=main"
+#     jsons, douyin_number, name = asyncio.run(print_aweme_responses(user_home_url))
+#     save_path = Path(f"data/{name}_{douyin_number}/aweme.json")
+#     save_path.parent.mkdir(parents=True, exist_ok=True)
+#     with open(save_path, "w", encoding="UTF-8") as f:
+#         json.dump(jsons, f, indent=4, ensure_ascii=False)
+#     # load_json_objs = jsons
+#     # aweme_lists = [
+#     #     obj.get("aweme_list") for obj in load_json_objs if obj.get("aweme_list")
+#     # ]
+#     # video_informations = set(
+#     #     [
+#     #         (aweme.get("aweme_id"), aweme.get("desc"))
+#     #         for aweme_list in aweme_lists
+#     #         for aweme in aweme_list
+#     #         if aweme.get("desc")
+#     #     ]
+#     # )
+#     # print(video_informations, f"len: {len(video_informations)}")

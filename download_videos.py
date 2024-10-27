@@ -147,7 +147,12 @@ def format_digg_count(digg_count: int | float) -> str:
     return str(digg_count)
 
 
-async def download_main(data_save_path: str | Path = "data"):
+async def download_main(
+    data_save_path: str | Path = "data", download_quantity: int | None = None
+):
+    assert (
+        isinstance(download_quantity, int) or download_quantity is None
+    ), "download_quantity must be an integer or None"
     assert isinstance(data_save_path, str) or isinstance(
         data_save_path, Path
     ), "data_save_path must be a string or Path"
@@ -215,8 +220,23 @@ async def download_main(data_save_path: str | Path = "data"):
                     url_list = cover_obj.get("url_list", [])
                     if url_list:
                         # cover_url = url_list[-1]
-                        for index, cover_url in enumerate(url_list):
-                            cover_path = cover_folder / f"cover_{index}.jpg"
+                        if not download_quantity:
+                            for index, cover_url in enumerate(url_list):
+                                cover_path = cover_folder / f"cover_{index}.jpg"
+                                cover_path.parent.mkdir(parents=True, exist_ok=True)
+                                tasks.append(
+                                    download_file_async(
+                                        cover_url,
+                                        cover_path,
+                                        session=session,
+                                    )
+                                )
+                                print(
+                                    f"added {index+1} cover_url download task: {cover_url}"
+                                )
+                        else:
+                            cover_url = url_list[-1]
+                            cover_path = cover_folder / "cover.jpg"
                             cover_path.parent.mkdir(parents=True, exist_ok=True)
                             tasks.append(
                                 download_file_async(
@@ -225,9 +245,7 @@ async def download_main(data_save_path: str | Path = "data"):
                                     session=session,
                                 )
                             )
-                            print(
-                                f"added {index+1} cover_url download task: {cover_url}"
-                            )
+                            print(f"added cover_url download task: {cover_url}")
 
                 #
                 video_obj = data.get("video", {})
@@ -236,8 +254,24 @@ async def download_main(data_save_path: str | Path = "data"):
                     if play_addr_obj:
                         url_list = play_addr_obj.get("url_list", [])
                         if url_list:
-                            for index, play_addr_url in enumerate(url_list):
-                                video_filename = f"{sanitized_desc}_{index}.mp4"
+                            if not download_quantity:
+                                for index, play_addr_url in enumerate(url_list):
+                                    video_filename = f"{sanitized_desc}_{index}.mp4"
+                                    video_path = video_folder / video_filename
+                                    video_path.parent.mkdir(parents=True, exist_ok=True)
+                                    tasks.append(
+                                        download_file_async(
+                                            play_addr_url,
+                                            video_path,
+                                            session=session,
+                                        )
+                                    )
+                                    print(
+                                        f"added {index+1} play_addr_url download task: {play_addr_url}"
+                                    )
+                            else:
+                                play_addr_url = url_list[-1]
+                                video_filename = f"{sanitized_desc}.mp4"
                                 video_path = video_folder / video_filename
                                 video_path.parent.mkdir(parents=True, exist_ok=True)
                                 tasks.append(
@@ -248,7 +282,7 @@ async def download_main(data_save_path: str | Path = "data"):
                                     )
                                 )
                                 print(
-                                    f"added {index+1} play_addr_url download task: {play_addr_url}"
+                                    f"added play_addr_url download task: {play_addr_url}"
                                 )
 
                 # 下载音乐文件
@@ -258,8 +292,24 @@ async def download_main(data_save_path: str | Path = "data"):
                     if play_url_obj:
                         url_list = play_url_obj.get("url_list", [])
                         if url_list:
-                            for index, music_uri in enumerate(url_list):
-                                music_filename = f"{sanitized_desc}_{index}.mp3"
+                            if not download_quantity:
+                                for index, music_uri in enumerate(url_list):
+                                    music_filename = f"{sanitized_desc}_{index}.mp3"
+                                    music_path = mp3_folder / music_filename
+                                    music_path.parent.mkdir(parents=True, exist_ok=True)
+                                    tasks.append(
+                                        download_file_async(
+                                            music_uri,
+                                            music_path,
+                                            session=session,
+                                        )
+                                    )
+                                    print(
+                                        f"added {index+1} music_uri download task: {music_uri}"
+                                    )
+                            else:
+                                music_uri = url_list[-1]
+                                music_filename = f"{sanitized_desc}.mp3"
                                 music_path = mp3_folder / music_filename
                                 music_path.parent.mkdir(parents=True, exist_ok=True)
                                 tasks.append(
@@ -269,15 +319,30 @@ async def download_main(data_save_path: str | Path = "data"):
                                         session=session,
                                     )
                                 )
-                                print(
-                                    f"added {index+1} music_uri download task: {music_uri}"
-                                )
+                                print(f"added music_uri download task: {music_uri}")
 
                 # 下载 images
                 images = data.get("images")
-                if images:  # 只在 images 不为 null 时下载
-                    for idx, image_url in enumerate(images):
-                        image_path = images_folder / f"{desc}_{idx + 1}.jpg"
+                if (
+                    images
+                    and isinstance(images, (list, tuple, set))
+                    and len(images) > 0
+                ):
+                    if not download_quantity:
+                        for idx, image_url in enumerate(images):
+                            image_path = images_folder / f"{desc}_{idx + 1}.jpg"
+                            image_path.parent.mkdir(parents=True, exist_ok=True)
+                            tasks.append(
+                                download_file_async(
+                                    image_url,
+                                    image_path,
+                                    session=session,
+                                )
+                            )
+                            print(f"added image_url download task: {image_url}")
+                    else:
+                        image_url = images[-1]
+                        image_path = images_folder / f"{desc}.jpg"
                         image_path.parent.mkdir(parents=True, exist_ok=True)
                         tasks.append(
                             download_file_async(
@@ -288,15 +353,6 @@ async def download_main(data_save_path: str | Path = "data"):
                         )
                         print(f"added image_url download task: {image_url}")
 
-                # break  # 测试
-
-            # break  # 测试
-
     await asyncio.gather(*tasks)
 
     await session.close()
-
-
-# if __name__ == "__main__":
-
-# asyncio.run(main())

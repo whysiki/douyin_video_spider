@@ -3,3 +3,11 @@ __pycache__/playwright.cpython-312.pyc
 /aweme.json
 /homepage.html
 /data
+/data2
+**/**.json
+**/**.html
+**/**.jpg
+**/**.png
+**/**.mp4
+**/**.mp3
+**/**.pyc

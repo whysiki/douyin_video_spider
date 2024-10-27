@@ -5,6 +5,7 @@ import json
 import os
 import re
 from pathlib import Path
+from functools import lru_cache
 
 # 依赖安装，命令行执行以下命令
 # pip install playwright
@@ -37,7 +38,7 @@ async def print_aweme_responses(user_home_url) -> tuple[str, str, str]:
         # headless=False 会打开浏览器
         # headless=True 不会打开浏览器
         browser = await p.firefox.launch(
-            headless=False,  # True if isloaded else False,
+            headless=True if isloaded else False,
             args=[
                 # "--incognito",  # 隐身模式
                 # "--disable-gpu",  # 禁用 GPU 硬件加速
@@ -64,8 +65,8 @@ async def print_aweme_responses(user_home_url) -> tuple[str, str, str]:
             "**/*", handle_special_block_urls_keywords
         )  # Union[Callable[[Route, Request], Any], Callable[[Route], Any]]
         if isloaded:
-            page.route("**/*", handle_route_banimg_and_media)
-            page.route("**/*", handle_route_banimg_and_media)
+            await page.route("**/*", handle_route_banimg_and_media)
+            await page.route("**/*", handle_route_banimg_and_media)
         jsons = []
 
         async def handle_response(response):
@@ -120,20 +121,25 @@ async def print_aweme_responses(user_home_url) -> tuple[str, str, str]:
             expected_works_count = await page.inner_text("span.MNSB3oPV")
             print(f"总作品数量: {expected_works_count}")
 
-            while True:
+            max_retry = 3
+            while max_retry > 0:
                 current_count = par_jsons(jsons)
                 if current_count >= int(expected_works_count):
                     break
                 previous_height = await page.evaluate("document.body.scrollHeight")
-                await page.mouse.wheel(0, previous_height)
-                await page.wait_for_timeout(2000)
-                await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                await page.wait_for_timeout(2000)
+                await page.evaluate("window.scrollBy(0, window.innerHeight)")
+
+                await page.wait_for_timeout(1000)
+                new_height = await page.evaluate("document.body.scrollHeight")
+                if new_height == previous_height:
+                    print("页面高度没有变化，可能已经到底部")
                 print(
                     f"当前读取作品数量: {current_count}，总作品数量: {expected_works_count}"
                 )
-                print(f"如果当前作品数量不再增加，请手动滚动页面")
-
+                print(
+                    f"如果当前作品数量不再增加，请手动滚动页面, 剩余重试次数: {max_retry}"
+                )
+                max_retry -= 1
             await context.storage_state(path="state.json")
 
             await browser.close()
@@ -157,6 +163,7 @@ async def print_aweme_responses(user_home_url) -> tuple[str, str, str]:
             print("退出")
 
 
+@lru_cache(maxsize=128)
 def par_jsons(jsons: list) -> int:
     aweme_lists = [obj.get("aweme_list") for obj in jsons if obj.get("aweme_list")]
 

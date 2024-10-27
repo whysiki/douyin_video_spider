@@ -21,7 +21,7 @@ def sanitize_filename(filename: str):
 
 
 # 重试装饰器
-def async_retry_decorator(func):
+def async_download_retry_decorator(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         last_exception = None
@@ -39,12 +39,39 @@ def async_retry_decorator(func):
                     style="bold yellow",
                 )
                 await asyncio.sleep(random.randint(1, 5))
+
+                if kwargs and "session" in kwargs:
+                    kwargs["session"] = aiohttp.ClientSession()
+                    Console().print(
+                        f"\n{func.__name__} session has been reset\n",
+                        style="bold green",
+                    )
+        if kwargs and "file_save_path" in kwargs:
+            file_path = (
+                Path(kwargs["file_save_path"])
+                if isinstance(kwargs["file_save_path"], str)
+                else kwargs["file_save_path"]
+            )
+            if file_path.exists():
+                logger.error(
+                    f"Deleting {file_path.name} because of reached retry limit"
+                )
+                file_path.unlink()
+        if (
+            kwargs
+            and "session" in kwargs
+            and isinstance(kwargs["session"], aiohttp.ClientSession)
+        ):
+            await kwargs["session"].close()
+            Console().print(
+                f"\n{func.__name__} session has been closed\n", style="bold green"
+            )
         raise last_exception
 
     return wrapper
 
 
-@async_retry_decorator
+@async_download_retry_decorator
 async def download_file_async(
     url: str,
     file_save_path: str | Path,
@@ -125,15 +152,15 @@ async def download_file_async(
                     bar.refresh()
             if file_path.stat().st_size == total_size:
                 bar.set_postfix_str("Downloaded")
+
+            logger.success(
+                f"Downloaded {file_path.name} to {file_path.parent.as_posix()}"
+            )
     finally:
         if not gived_session:
             await session.close()
-
         if bar and isinstance(bar, tqdm):
-            # bar.clear()
             bar.close()
-            print(f"Downloaded {file_path.name} to {file_path.parent.as_posix()}")
-
     return total_size
 
 
@@ -148,11 +175,13 @@ def format_digg_count(digg_count: int | float) -> str:
 
 
 async def download_main(
-    data_save_path: str | Path = "data", download_quantity: int | None = None
+    data_save_path: str | Path = "data",  # 数据保存路径
+    download_quality: int | None = None,  # 下载质量
+    downnload_num: int = 0,  # 下载数量
 ):
     assert (
-        isinstance(download_quantity, int) or download_quantity is None
-    ), "download_quantity must be an integer or None"
+        isinstance(download_quality, int) or download_quality is None
+    ), "download_quality must be an integer or None"
     assert isinstance(data_save_path, str) or isinstance(
         data_save_path, Path
     ), "data_save_path must be a string or Path"
@@ -163,8 +192,11 @@ async def download_main(
 
     session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=600))
     tasks = []
+
+    downnload_num_count = 0
+
     for json_file in json_files_Generator:
-        print(f"loading aweme json data: {json_file.as_posix()}")
+        logger.info(f"loading aweme json data: {json_file.as_posix()}")
 
         with open(json_file, "r", encoding="utf-8") as f:
             load_json_objs = json.load(f)
@@ -195,11 +227,13 @@ async def download_main(
                 # 格式化 digg_count
                 formatted_digg_count_str: str = format_digg_count(digg_count)
 
-                print(f"视频id:{aweme_id}, 点赞数: {digg_count}, nickname: {nickname}")
+                logger.info(
+                    f"视频id:{aweme_id}, 点赞数: {digg_count}, nickname: {nickname}"
+                )
 
                 # 下载视频文件，并使用视频描述 (desc) 作为文件名
                 desc = data.get("desc", "unknown_desc")
-                print(f"desc: {desc}")
+                logger.info(f"desc: {desc}")
                 sanitized_desc = sanitize_filename(desc)  # 清理不允许的字符
 
                 # 创建文件夹名称，添加格式化后的 digg_count
@@ -219,71 +253,92 @@ async def download_main(
                 if cover_obj:
                     url_list = cover_obj.get("url_list", [])
                     if url_list:
-                        # cover_url = url_list[-1]
-                        if not download_quantity:
+                        if not download_quality:
                             for index, cover_url in enumerate(url_list):
-                                cover_path = cover_folder / f"cover_{index}.jpg"
+                                if (
+                                    cover_url
+                                    and isinstance(cover_url, str)
+                                    and cover_url.startswith("http")
+                                ):
+                                    cover_path = cover_folder / f"cover_{index}.jpg"
+                                    cover_path.parent.mkdir(parents=True, exist_ok=True)
+                                    tasks.append(
+                                        download_file_async(
+                                            cover_url,
+                                            file_save_path=cover_path,
+                                            session=session,
+                                        )
+                                    )
+                                    logger.info(
+                                        f"added {index+1} cover_url download task: {cover_url}"
+                                    )
+                        else:
+                            cover_url = url_list[download_quality]
+                            if (
+                                cover_url
+                                and isinstance(cover_url, str)
+                                and cover_url.startswith("http")
+                            ):
+                                cover_path = cover_folder / "cover.jpg"
                                 cover_path.parent.mkdir(parents=True, exist_ok=True)
                                 tasks.append(
                                     download_file_async(
                                         cover_url,
-                                        cover_path,
+                                        file_save_path=cover_path,
                                         session=session,
                                     )
                                 )
-                                print(
-                                    f"added {index+1} cover_url download task: {cover_url}"
+                                logger.info(
+                                    f"added cover_url download task: {cover_url}"
                                 )
-                        else:
-                            cover_url = url_list[-1]
-                            cover_path = cover_folder / "cover.jpg"
-                            cover_path.parent.mkdir(parents=True, exist_ok=True)
-                            tasks.append(
-                                download_file_async(
-                                    cover_url,
-                                    cover_path,
-                                    session=session,
-                                )
-                            )
-                            print(f"added cover_url download task: {cover_url}")
-
-                #
                 video_obj = data.get("video", {})
                 if video_obj:
                     play_addr_obj = video_obj.get("play_addr", {})
                     if play_addr_obj:
                         url_list = play_addr_obj.get("url_list", [])
                         if url_list:
-                            if not download_quantity:
+                            if not download_quality:
                                 for index, play_addr_url in enumerate(url_list):
-                                    video_filename = f"{sanitized_desc}_{index}.mp4"
+                                    if (
+                                        play_addr_url
+                                        and isinstance(play_addr_url, str)
+                                        and play_addr_url.startswith("http")
+                                    ):
+                                        video_filename = f"{sanitized_desc}_{index}.mp4"
+                                        video_path = video_folder / video_filename
+                                        video_path.parent.mkdir(
+                                            parents=True, exist_ok=True
+                                        )
+                                        tasks.append(
+                                            download_file_async(
+                                                play_addr_url,
+                                                file_save_path=video_path,
+                                                session=session,
+                                            )
+                                        )
+                                        logger.info(
+                                            f"added {index+1} play_addr_url download task: {play_addr_url}"
+                                        )
+                            else:
+                                play_addr_url = url_list[download_quality]
+                                if (
+                                    play_addr_url
+                                    and isinstance(play_addr_url, str)
+                                    and play_addr_url.startswith("http")
+                                ):
+                                    video_filename = f"{sanitized_desc}.mp4"
                                     video_path = video_folder / video_filename
                                     video_path.parent.mkdir(parents=True, exist_ok=True)
                                     tasks.append(
                                         download_file_async(
                                             play_addr_url,
-                                            video_path,
+                                            file_save_path=video_path,
                                             session=session,
                                         )
                                     )
-                                    print(
-                                        f"added {index+1} play_addr_url download task: {play_addr_url}"
+                                    logger.info(
+                                        f"added play_addr_url download task: {play_addr_url}"
                                     )
-                            else:
-                                play_addr_url = url_list[-1]
-                                video_filename = f"{sanitized_desc}.mp4"
-                                video_path = video_folder / video_filename
-                                video_path.parent.mkdir(parents=True, exist_ok=True)
-                                tasks.append(
-                                    download_file_async(
-                                        play_addr_url,
-                                        video_path,
-                                        session=session,
-                                    )
-                                )
-                                print(
-                                    f"added play_addr_url download task: {play_addr_url}"
-                                )
 
                 # 下载音乐文件
                 music_obj = data.get("music", {})
@@ -292,34 +347,48 @@ async def download_main(
                     if play_url_obj:
                         url_list = play_url_obj.get("url_list", [])
                         if url_list:
-                            if not download_quantity:
+                            if not download_quality:
                                 for index, music_uri in enumerate(url_list):
-                                    music_filename = f"{sanitized_desc}_{index}.mp3"
+                                    if (
+                                        music_uri
+                                        and isinstance(music_uri, str)
+                                        and music_uri.startswith("http")
+                                    ):
+                                        music_filename = f"{sanitized_desc}_{index}.mp3"
+                                        music_path = mp3_folder / music_filename
+                                        music_path.parent.mkdir(
+                                            parents=True, exist_ok=True
+                                        )
+                                        tasks.append(
+                                            download_file_async(
+                                                music_uri,
+                                                file_save_path=music_path,
+                                                session=session,
+                                            )
+                                        )
+                                        logger.info(
+                                            f"added {index+1} music_uri download task: {music_uri}"
+                                        )
+                            else:
+                                music_uri = url_list[download_quality]
+                                if (
+                                    music_uri
+                                    and isinstance(music_uri, str)
+                                    and music_uri.startswith("http")
+                                ):
+                                    music_filename = f"{sanitized_desc}.mp3"
                                     music_path = mp3_folder / music_filename
                                     music_path.parent.mkdir(parents=True, exist_ok=True)
                                     tasks.append(
                                         download_file_async(
                                             music_uri,
-                                            music_path,
+                                            file_save_path=music_path,
                                             session=session,
                                         )
                                     )
-                                    print(
-                                        f"added {index+1} music_uri download task: {music_uri}"
+                                    logger.info(
+                                        f"added music_uri download task: {music_uri}"
                                     )
-                            else:
-                                music_uri = url_list[-1]
-                                music_filename = f"{sanitized_desc}.mp3"
-                                music_path = mp3_folder / music_filename
-                                music_path.parent.mkdir(parents=True, exist_ok=True)
-                                tasks.append(
-                                    download_file_async(
-                                        music_uri,
-                                        music_path,
-                                        session=session,
-                                    )
-                                )
-                                print(f"added music_uri download task: {music_uri}")
 
                 # 下载 images
                 images = data.get("images")
@@ -328,31 +397,52 @@ async def download_main(
                     and isinstance(images, (list, tuple, set))
                     and len(images) > 0
                 ):
-                    if not download_quantity:
+                    if not download_quality:
                         for idx, image_url in enumerate(images):
-                            image_path = images_folder / f"{desc}_{idx + 1}.jpg"
+                            if (
+                                image_url
+                                and isinstance(image_url, str)
+                                and image_url.startswith("http")
+                            ):
+                                image_path = images_folder / f"{desc}_{idx + 1}.jpg"
+                                image_path.parent.mkdir(parents=True, exist_ok=True)
+                                tasks.append(
+                                    download_file_async(
+                                        image_url,
+                                        file_save_path=image_path,
+                                        session=session,
+                                    )
+                                )
+                                logger.info(
+                                    f"added image_url download task: {image_url}"
+                                )
+                    else:
+                        image_url = images[download_quality]
+                        if (
+                            image_url
+                            and isinstance(image_url, str)
+                            and image_url.startswith("http")
+                        ):
+                            image_path = images_folder / f"{desc}.jpg"
                             image_path.parent.mkdir(parents=True, exist_ok=True)
                             tasks.append(
                                 download_file_async(
                                     image_url,
-                                    image_path,
+                                    file_save_path=image_path,
                                     session=session,
                                 )
                             )
-                            print(f"added image_url download task: {image_url}")
-                    else:
-                        image_url = images[-1]
-                        image_path = images_folder / f"{desc}.jpg"
-                        image_path.parent.mkdir(parents=True, exist_ok=True)
-                        tasks.append(
-                            download_file_async(
-                                image_url,
-                                image_path,
-                                session=session,
-                            )
-                        )
-                        print(f"added image_url download task: {image_url}")
+                            logger.info(f"added image_url download task: {image_url}")
 
+                downnload_num_count += 1
+                logger.info(f"downnload_num_count: {downnload_num_count}")
+                if downnload_num > 0 and downnload_num_count >= downnload_num:
+                    break
+            if downnload_num > 0 and downnload_num_count >= downnload_num:
+                logger.success(
+                    f"downnload_num_count: {downnload_num_count} == {downnload_num}"
+                )
+                break
     await asyncio.gather(*tasks)
 
     await session.close()

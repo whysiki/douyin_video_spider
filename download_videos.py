@@ -132,6 +132,7 @@ async def download_file_async(
         if bar and isinstance(bar, tqdm):
             # bar.clear()
             bar.close()
+            print(f"Downloaded {file_path.name} to {file_path.parent.as_posix()}")
 
     return total_size
 

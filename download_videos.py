@@ -138,12 +138,12 @@ def format_digg_count(digg_count: int | float) -> str:
 
 
 async def main():
-    base_path = Path("data/冰叔语录_2215929089")
-    json_files_Generator = base_path.glob("*.json")  # Generator[Path, None, None]
+    base_path = Path("data")
+
+    json_files_Generator = base_path.glob("**/*.json")
 
     session = aiohttp.ClientSession()
     tasks = []
-
     for json_file in json_files_Generator:
         print(f"loading aweme json data: {json_file.as_posix()}")
 
@@ -181,7 +181,7 @@ async def main():
                 # 创建文件夹名称，添加格式化后的 digg_count
                 aweme_folder = (
                     json_file.parent
-                    / f"{digg_count}-{nickname}-{aweme_id}-{formatted_digg_count_str}"
+                    / f"{digg_count}-{aweme_id}-{formatted_digg_count_str}"
                 )
 
                 # 创建各个子文件夹

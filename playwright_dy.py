@@ -3,6 +3,7 @@ from playwright.async_api import async_playwright
 from rich import print
 import json
 import os
+import re
 
 # 依赖安装，命令行执行以下命令
 # pip install playwright
@@ -22,9 +23,12 @@ async def handle_route_banimg_and_media(route, request):
 
 async def handle_special_block_urls_keywords(route, request):
     block_urls_keywords = ["lf-douyin-pc-web.douyinstatic.com"]
+    #
     for keyword in block_urls_keywords:
         if keyword in request.url:
-            await route.abort()
+            # await route.abort()
+            # print(f"Blocked: {request.url}")
+            await route.continue_()
         else:
             await route.continue_()
 
@@ -58,7 +62,7 @@ async def print_aweme_responses():
 
         page = await context.new_page()
 
-        page.route(
+        await page.route(
             "**/*", handle_special_block_urls_keywords
         )  # Union[Callable[[Route, Request], Any], Callable[[Route], Any]]
         # page.route("**/*", handle_route_banimg_and_media)
@@ -76,7 +80,6 @@ async def print_aweme_responses():
             "response", lambda response: asyncio.create_task(handle_response(response))
         )
         try:
-            # await page.goto("https://www.douyin.com/", timeout=10000 * 1000)
             await page.goto(
                 test_url, wait_until="domcontentloaded", timeout=10000 * 1000
             )
@@ -86,6 +89,30 @@ async def print_aweme_responses():
                     "div > div:nth-child(8) > div > a > span > img",
                     timeout=10000 * 1000,
                 )
+
+            await context.storage_state(path="state.json")
+
+            # 获取抖音号 正则匹配
+            await page.wait_for_selector(
+                "#douyin-right-container > div.parent-route-container.route-scroll-container"
+            )
+            # 包含抖音号的span标签
+            text = page.locator(
+                "#douyin-right-container > div.parent-route-container.route-scroll-container > div > div > div > div > div > p > span",
+                has_text="抖音号",
+            )
+            douyin_number_tag = await text.inner_text()
+            # 匹配抖音号
+            douyin_number = re.search(r"(\d+)", douyin_number_tag).group(1)
+            print(f"抖音号: {douyin_number}")
+
+            # 获取用户昵称
+            name_tag = await page.query_selector(
+                "#douyin-right-container > div.parent-route-container.route-scroll-container.IhmVuo1S > div > div > div > div.a3i9GVfe.nZryJ1oM._6lTeZcQP.y5Tqsaqg > div.IGPVd8vQ > div.HjcJQS1Z > h1 > span > span > span > span > span > span"
+            )
+            if name_tag:
+                name = await name_tag.inner_text()
+                print(f"用户昵称: {name}")
 
             await page.wait_for_selector("div.XNarezzx")
             await page.wait_for_selector("span.MNSB3oPV")
@@ -112,10 +139,15 @@ async def print_aweme_responses():
         except Exception as e:
             print(f"Error: {e}")
             await browser.close()
+            # 确认
+
             if os.path.exists("state.json"):
-                print("删除state.json")
-                os.remove("state.json")
+                acf = input("是否删除state.json文件然后继续(y/n): ")
+                if acf == "y":
+                    print("删除state.json")
+                    os.remove("state.json")
             await print_aweme_responses()
+            print("退出")
 
 
 def par_jsons(jsons: list) -> int:
@@ -141,6 +173,7 @@ if __name__ == "__main__":
     with open("aweme.json", "r", encoding="UTF-8") as f:
         load_json_objs = json.load(f)
 
+    load_json_objs = jsons
     aweme_lists = [
         obj.get("aweme_list") for obj in load_json_objs if obj.get("aweme_list")
     ]

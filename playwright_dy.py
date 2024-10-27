@@ -163,7 +163,6 @@ async def print_aweme_responses(user_home_url) -> tuple[str, str, str]:
             print("退出")
 
 
-@lru_cache(maxsize=128)
 def par_jsons(jsons: list) -> int:
     aweme_lists = [obj.get("aweme_list") for obj in jsons if obj.get("aweme_list")]
 

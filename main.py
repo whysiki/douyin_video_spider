@@ -2,8 +2,9 @@ from download_videos import download_main
 from playwright_dy import save_user_videos_aneme_jsonobjs
 import asyncio
 from loguru import logger
+import os
 
-logger.add("logs/log.log", rotation="10 MB", retention="10 days", level="DEBUG")
+logger.add("logs/log.log", rotation="10 MB", retention="10 days", level="SUCCESS")
 
 # 用户主页链接是抖音用户主页链接
 user_home_page_urls = [
@@ -18,7 +19,7 @@ user_home_page_urls = [
 # - - - - video
 # - - - - mp3
 # - - - - cover
-data_dir = "data3"
+data_dir = "testdata"
 
 for user_home_page_url in user_home_page_urls:
     save_user_videos_aneme_jsonobjs(user_home_page_url, data_save_dir=data_dir)

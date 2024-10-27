@@ -41,6 +41,10 @@ def async_download_retry_decorator(func):
                 await asyncio.sleep(random.randint(1, 5))
 
                 if kwargs and "session" in kwargs:
+                    # 关闭旧的 session
+                    if isinstance(kwargs["session"], aiohttp.ClientSession):
+                        await kwargs["session"].close()
+                    # 重置 session
                     kwargs["session"] = aiohttp.ClientSession()
                     Console().print(
                         f"\n{func.__name__} session has been reset\n",

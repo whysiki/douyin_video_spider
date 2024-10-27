@@ -29,21 +29,12 @@ async def handle_special_block_urls_keywords(route, request):
             await route.continue_()
 
 
-async def handle_response(response):
-    if "aweme/v1/web/aweme/post" in response.url:
-        try:
-            response_json = await response.json()
-            jsons.append(response_json)
-        except Exception as e:
-            print(f"Error processing response: {e}")
-
-
 async def print_aweme_responses():
     async with async_playwright() as p:
         isloaded = False
         # headless=False 会打开浏览器
         # headless=True 不会打开浏览器
-        browser = await p.chromium.launch(
+        browser = await p.firefox.launch(
             headless=False,
             args=[
                 # "--incognito",  # 隐身模式
@@ -53,7 +44,7 @@ async def print_aweme_responses():
                 # "--window-size=1280,800",  # 设置窗口大小
                 # firefox 配置
                 # "-foreground",  # 前台运行
-                # "-private",  # 隐身模式
+                "-private",  # 隐身模式
                 # "-headless",  # 无头模式
             ],
             # devtools=True,
@@ -67,24 +58,35 @@ async def print_aweme_responses():
 
         page = await context.new_page()
 
-        page.route("**/*", handle_special_block_urls_keywords)
-
+        page.route(
+            "**/*", handle_special_block_urls_keywords
+        )  # Union[Callable[[Route, Request], Any], Callable[[Route], Any]]
+        # page.route("**/*", handle_route_banimg_and_media)
         jsons = []
+
+        async def handle_response(response):
+            if "aweme/v1/web/aweme/post" in response.url:
+                try:
+                    response_json = await response.json()
+                    jsons.append(response_json)
+                except Exception as e:
+                    print(f"Error processing response: {e}")
 
         page.on(
             "response", lambda response: asyncio.create_task(handle_response(response))
         )
         try:
-            await page.goto("https://www.douyin.com/", timeout=10000 * 1000)
+            # await page.goto("https://www.douyin.com/", timeout=10000 * 1000)
+            await page.goto(
+                test_url, wait_until="domcontentloaded", timeout=10000 * 1000
+            )
             if not isloaded:
                 print("等待用户登录")
                 await page.wait_for_selector(
                     "div > div:nth-child(8) > div > a > span > img",
                     timeout=10000 * 1000,
                 )
-            await page.goto(
-                test_url, wait_until="domcontentloaded", timeout=10000 * 1000
-            )
+
             await page.wait_for_selector("div.XNarezzx")
             await page.wait_for_selector("span.MNSB3oPV")
             expected_works_count = await page.inner_text("span.MNSB3oPV")

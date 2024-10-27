@@ -31,13 +31,13 @@ async def handle_special_block_urls_keywords(route, request):
             await route.continue_()
 
 
-async def print_aweme_responses(test_url) -> tuple[str, str, str]:
+async def print_aweme_responses(user_home_url) -> tuple[str, str, str]:
     async with async_playwright() as p:
-        isloaded = False
+        isloaded = True if os.path.exists("state.json") else False
         # headless=False 会打开浏览器
         # headless=True 不会打开浏览器
         browser = await p.firefox.launch(
-            headless=True,
+            headless=False,  # True if isloaded else False,
             args=[
                 # "--incognito",  # 隐身模式
                 # "--disable-gpu",  # 禁用 GPU 硬件加速
@@ -52,7 +52,7 @@ async def print_aweme_responses(test_url) -> tuple[str, str, str]:
             # devtools=True,
             # ignore_default_args=True,
         )
-        if os.path.exists("state.json"):
+        if isloaded:
             context = await browser.new_context(storage_state="state.json")
             isloaded = True
         else:
@@ -63,7 +63,8 @@ async def print_aweme_responses(test_url) -> tuple[str, str, str]:
         await page.route(
             "**/*", handle_special_block_urls_keywords
         )  # Union[Callable[[Route, Request], Any], Callable[[Route], Any]]
-        # page.route("**/*", handle_route_banimg_and_media)
+        if isloaded:
+            page.route("**/*", handle_route_banimg_and_media)
         jsons = []
 
         async def handle_response(response):
@@ -79,7 +80,7 @@ async def print_aweme_responses(test_url) -> tuple[str, str, str]:
         )
         try:
             await page.goto(
-                test_url, wait_until="domcontentloaded", timeout=10000 * 1000
+                user_home_url, wait_until="domcontentloaded", timeout=10000 * 1000
             )
             if not isloaded:
                 print("等待用户登录")
@@ -124,6 +125,7 @@ async def print_aweme_responses(test_url) -> tuple[str, str, str]:
                     break
                 previous_height = await page.evaluate("document.body.scrollHeight")
                 await page.mouse.wheel(0, previous_height)
+                await page.wait_for_timeout(2000)
                 await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 await page.wait_for_timeout(2000)
                 print(
@@ -171,15 +173,12 @@ def par_jsons(jsons: list) -> int:
 
 if __name__ == "__main__":
     # 用户主页链接
-    test_url = "https://www.douyin.com/user/MS4wLjABAAAAnH5exW9sbuKNUVck8jWI6ajeA68coGy2fQ1lR5XOARk?from_tab_name=main"
-    jsons, douyin_number, name = asyncio.run(print_aweme_responses())
+    user_home_url = "https://www.douyin.com/user/MS4wLjABAAAAnH5exW9sbuKNUVck8jWI6ajeA68coGy2fQ1lR5XOARk?from_tab_name=main"
+    jsons, douyin_number, name = asyncio.run(print_aweme_responses(user_home_url))
     save_path = Path(f"data/{name}_{douyin_number}/aweme.json")
     save_path.parent.mkdir(parents=True, exist_ok=True)
     with open(save_path, "w", encoding="UTF-8") as f:
         json.dump(jsons, f, indent=4, ensure_ascii=False)
-    load_json_objs = []
-    # with open(save_path, "r", encoding="UTF-8") as f:
-    #     load_json_objs = json.load(f)
     load_json_objs = jsons
     aweme_lists = [
         obj.get("aweme_list") for obj in load_json_objs if obj.get("aweme_list")

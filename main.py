@@ -19,10 +19,11 @@ user_home_page_urls = [
 # - - - - video
 # - - - - mp3
 # - - - - cover
-data_dir = "testdata"
+
+data_dir = "testdata2"
 
 for user_home_page_url in user_home_page_urls:
     save_user_videos_aneme_jsonobjs(user_home_page_url, data_save_dir=data_dir)
     asyncio.run(
-        download_main(data_save_path=data_dir, download_quality=-1, downnload_num=5)
+        download_main(data_save_path=data_dir, download_quality=-1, download_num=5)
     )  # -1 代表最好的质量

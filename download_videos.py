@@ -121,7 +121,7 @@ async def download_file_async(
             await session.close()
 
         if bar and isinstance(bar, tqdm):
-            bar.clear()
+            # bar.clear()
             bar.close()
 
     return total_size
@@ -161,9 +161,7 @@ async def main():
             if aweme.get("desc") and aweme.get("aweme_id")
         )
         # print(random.choice(id_aweme_data_dict_set))
-
         for aweme_data in id_aweme_data_dict_set:
-
             assert isinstance(aweme_data, dict), (
                 "Error aweme_data" + f"type : {type(aweme_data)}"
             )
@@ -178,7 +176,7 @@ async def main():
                 # 格式化 digg_count
                 formatted_digg_count_str: str = format_digg_count(digg_count)
 
-                print(f"点赞数: {digg_count}, nickname: {nickname}")
+                print(f"视频id:{aweme_id}, 点赞数: {digg_count}, nickname: {nickname}")
 
                 # 创建文件夹名称，添加格式化后的 digg_count
                 aweme_folder = (
@@ -193,7 +191,7 @@ async def main():
                 images_folder = aweme_folder / "images"
 
                 # 下载封面图片
-                cover_obj = data.get("cover", {})
+                cover_obj = data.get("video", {}).get("cover", {})
                 if cover_obj:
                     url_list = cover_obj.get("url_list", [])
                     if url_list:

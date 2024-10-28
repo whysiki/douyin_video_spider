@@ -9,14 +9,15 @@ import asyncio
 from fake_useragent import UserAgent
 from useful_decorators import async_download_retry_decorator
 from useful_tools import sanitize_filename, format_digg_count
+import random
+from useful_tools import read_statejson_and_get_cookie_headers
 
 
 @logger.catch
 @async_download_retry_decorator(
-    retry_times=6,
-    sleep_interval_min=1,
-    sleep_interval_max=5,
-    reset_session_interval=2,
+    retry_times=10,
+    sleep_interval_min=5,
+    sleep_interval_max=15,
 )
 async def download_file_async(
     url: str,
@@ -24,100 +25,117 @@ async def download_file_async(
     headers: dict = None,
     mix_size: int = 512,
     session: aiohttp.ClientSession = None,
+    semaphore_num: int = 3,
 ):
-    headers = (
-        headers.copy()
-        if isinstance(headers, dict)
-        else {"User-Agent": UserAgent().random, "Referer": "https://www.douyin.com/"}
-    )
-    headers.update({"User-Agent": UserAgent().random})
+    async with asyncio.Semaphore(semaphore_num):
+        headers = (
+            headers.copy()
+            if isinstance(headers, dict)
+            else {
+                "User-Agent": UserAgent().random,
+                "Referer": "https://www.douyin.com/",
+            }
+        )
+        headers.update({"User-Agent": UserAgent().random})
 
-    assert isinstance(url, str), "url must be a string"
-    assert isinstance(
-        file_save_path, (str, Path)
-    ), "file_save_path must be a string or Path"
-    assert isinstance(headers, dict), "headers must be a dictionary"
-    assert isinstance(mix_size, int), "mix_size must be an integer"
-    assert isinstance(
-        session, (aiohttp.ClientSession, type(None))
-    ), "session must be an aiohttp.ClientSession or None"
+        assert isinstance(url, str), "url must be a string"
+        assert isinstance(
+            file_save_path, (str, Path)
+        ), "file_save_path must be a string or Path"
+        assert isinstance(headers, dict), "headers must be a dictionary"
+        assert isinstance(mix_size, int), "mix_size must be an integer"
+        assert isinstance(
+            session, (aiohttp.ClientSession, type(None))
+        ), "session must be an aiohttp.ClientSession or None"
 
-    file_path = (
-        Path(file_save_path) if isinstance(file_save_path, str) else file_save_path
-    )
-    file_mode = "wb"
-    resume_header = {}
-    if file_path.exists():
-        existing_file_size = file_path.stat().st_size
-        resume_header = {"Range": f"bytes={existing_file_size}-"}
-        file_mode = "ab"
-    else:
-        existing_file_size = 0
+        file_path = (
+            Path(file_save_path) if isinstance(file_save_path, str) else file_save_path
+        )
+        file_mode = "wb"
+        resume_header = {}
+        if file_path.exists():
+            existing_file_size = file_path.stat().st_size
+            resume_header = {"Range": f"bytes={existing_file_size}-"}
+            file_mode = "ab"
+        else:
+            existing_file_size = 0
 
-    total_size = 0
-    bar = None
-    gived_session = bool(session and isinstance(session, aiohttp.ClientSession))
-    if not gived_session:
-        connector = None
-        session = aiohttp.ClientSession(connector=connector)
-    try:
-        async with session.get(
-            url, headers={**headers, **resume_header}, timeout=5
-        ) as response:
-            total_size = (
-                int(response.headers.get("content-length", 0)) + existing_file_size
+        total_size = 0
+        bar = None
+        gived_session = bool(session and isinstance(session, aiohttp.ClientSession))
+        if not gived_session:
+            # local_addr = random.choice(["10.193.1.195", "192.168.0.103"])
+            # connector = aiohttp.TCPConnector(local_addr=(local_addr, 0))
+            connector = None
+            # cookies, _ = read_statejson_and_get_cookie_headers()
+            session = aiohttp.ClientSession(
+                connector=connector,
+                timeout=aiohttp.ClientTimeout(connect=5),
+                # cookies=cookies,
             )
-            # 检查是否是媒体文件
-            content_type = response.headers.get("content-type", "")
-            if not re.match(r"^video|audio|image", content_type):
-                logger.warning(
-                    f"Content type is not video/audio/image, is this the correct file? {url} {content_type}"
+        try:
+            async with session.get(
+                url, headers={**headers, **resume_header}, timeout=10
+            ) as response:
+                total_size = (
+                    int(response.headers.get("content-length", 0)) + existing_file_size
                 )
-                raise ValueError(
-                    f"Content type is not video/audio/image, is this the correct file? {url} {content_type}"
+                if existing_file_size >= total_size:
+                    logger.success(
+                        f"Downloaded {file_path.name} to {file_path.parent.as_posix()}, {existing_file_size}={total_size}"
+                    )
+                    return
+                # 检查是否是媒体文件
+                content_type = response.headers.get("content-type", "")
+                if not re.match(r"^video|audio|image", content_type):
+                    logger.debug(
+                        f"Content type is not video/audio/image, is this the correct file? {url} {content_type}"
+                    )
+                    raise ValueError(
+                        f"Content type is not video/audio/image, is this the correct file? {url} {content_type}"
+                    )
+                if total_size <= mix_size:
+                    logger.debug(
+                        f"File size too small, is this the correct file? {url} {total_size}"
+                    )
+                    raise ValueError(
+                        f"File size too small, is this the correct file? {url} {total_size}"
+                    )
+                bar = tqdm(
+                    desc=file_path.name,
+                    total=total_size,
+                    initial=existing_file_size,
+                    unit="iB",
+                    unit_scale=True,
+                    unit_divisor=1024,
+                    smoothing=0.1,
+                    colour="green",
                 )
-            if total_size <= mix_size:
-                logger.warning(
-                    f"File size too small, is this the correct file? {url} {total_size}"
+                with open(file_save_path, file_mode) as file:
+                    while True:
+                        chunk = await response.content.read(1024)
+                        # logger.debug(f"chunk size: {len(chunk)}")
+                        if not chunk:
+                            break
+                        downloaded_size = file.write(chunk)
+                        bar.update(downloaded_size)
+                        bar.refresh()
+                if file_path.stat().st_size == total_size:
+                    bar.set_postfix_str("Downloaded")
+                logger.success(
+                    f"Downloaded {file_path.name} to {file_path.parent.as_posix()}"
                 )
-                raise ValueError(
-                    f"File size too small, is this the correct file? {url} {total_size}"
-                )
-            bar = tqdm(
-                desc=file_path.name,
-                total=total_size,
-                initial=existing_file_size,
-                unit="iB",
-                unit_scale=True,
-                unit_divisor=1024,
-                smoothing=0.1,
-                colour="green",
-            )
-            with open(file_save_path, file_mode) as file:
-                while True:
-                    chunk = await response.content.read(1024)
-                    logger.debug(f"chunk size: {len(chunk)}")
-                    if not chunk:
-                        break
-                    downloaded_size = file.write(chunk)
-                    bar.update(downloaded_size)
-                    bar.refresh()
-            if file_path.stat().st_size == total_size:
-                bar.set_postfix_str("Downloaded")
-            logger.success(
-                f"Downloaded {file_path.name} to {file_path.parent.as_posix()}"
-            )
-    finally:
-        if (
-            not gived_session
-            and session
-            and isinstance(session, aiohttp.ClientSession)
-            and not session.closed
-        ):
-            await session.close()
-        if bar and isinstance(bar, tqdm):
-            bar.close()
-    return total_size
+        finally:
+            if (
+                not gived_session
+                and session
+                and isinstance(session, aiohttp.ClientSession)
+                and not session.closed
+            ):
+                await session.close()
+            if bar and isinstance(bar, tqdm):
+                bar.close()
+        return total_size
 
 
 @logger.catch
@@ -125,7 +143,6 @@ async def download_main(
     data_save_path: str | Path = "data",
     download_quality: int | None = None,
     download_num: int = 0,
-    semaphore_num: int = 3,
 ):
     assert isinstance(
         download_quality, (int, type(None))
@@ -138,9 +155,10 @@ async def download_main(
     )
     json_files_generator = base_path.glob("**/*.json")
 
-    session = aiohttp.ClientSession(
-        timeout=aiohttp.ClientTimeout(connect=5)
-    )  # 如果5秒内没有连接成功, 则超时
+    # session = aiohttp.ClientSession(
+    #     timeout=aiohttp.ClientTimeout(connect=5)
+    # )  # 如果5秒内没有连接成功, 则超时
+    session = None
     tasks = []
     download_num_count = 0
 
@@ -203,8 +221,8 @@ async def download_main(
                     break
             if download_num > 0 and download_num_count >= download_num:
                 break
-    async with asyncio.Semaphore(semaphore_num):
-        await asyncio.gather(*tasks)
+    # async with asyncio.Semaphore(semaphore_num):
+    await asyncio.gather(*tasks)
     if session and isinstance(session, aiohttp.ClientSession) and not session.closed:
         await session.close()
 

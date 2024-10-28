@@ -6,6 +6,7 @@ import os
 import re
 from pathlib import Path
 from functools import lru_cache
+import random
 
 # 依赖安装，命令行执行以下命令
 # pip install playwright
@@ -15,20 +16,20 @@ from functools import lru_cache
 
 async def handle_route_banimg_and_media(route, request):
     if request.resource_type in ["image", "media"]:
-        # await route.abort()
-        # print(f"Blocked: {request.url}")
+        await route.abort()
+        print(f"Blocked: {request.url}")
         pass
     else:
         await route.continue_()
 
 
 async def handle_special_block_urls_keywords(route, request):
-    block_urls_keywords = ["lf-douyin-pc-web.douyinstatic.com", "If9-sec.bytetos.com"]
+    block_urls_keywords = ["lf-douyin-pc-web", "If9-sec"]
     #
     for keyword in block_urls_keywords:
-        if keyword in request.url:
-            # await route.abort()
-            # print(f"Blocked: {request.url}")
+        if keyword.split() in request.url:
+            await route.abort()
+            print(f"Blocked: {request.url}")
             pass
         else:
             await route.continue_()
@@ -67,12 +68,13 @@ async def print_aweme_responses(
 
         page = await context.new_page()
 
-        await page.route(
-            "**/*", handle_special_block_urls_keywords
-        )  # Union[Callable[[Route, Request], Any], Callable[[Route], Any]]
         if isloaded:
+            await page.route(
+                "**/*", handle_special_block_urls_keywords
+            )  # Union[Callable[[Route, Request], Any], Callable[[Route], Any]]
+            # await page.route("**/*", handle_route_banimg_and_media)
             await page.route("**/*", handle_route_banimg_and_media)
-            await page.route("**/*", handle_route_banimg_and_media)
+            pass
         jsons = []
 
         async def handle_response(response):
@@ -106,7 +108,7 @@ async def print_aweme_responses(
 
             print("登录成功")
 
-            await context.storage_state(path="state.json")
+            # await context.storage_state(path="state.json")
 
             # 获取抖音号 正则匹配
             await page.wait_for_selector(
@@ -119,7 +121,11 @@ async def print_aweme_responses(
             )
             douyin_number_tag = await text.inner_text()
             # 匹配抖音号
-            douyin_number = re.search(r"(\d+)", douyin_number_tag).group(1)
+            # douyin_number = re.search(r"(\d+)", douyin_number_tag).group(1)
+            douyin_number = re.sub(
+                r"抖音号[:：]|<!-- -->", "", douyin_number_tag
+            ).strip()
+
             print(f"抖音号: {douyin_number}")
 
             # 获取用户昵称
@@ -136,15 +142,25 @@ async def print_aweme_responses(
             expected_works_count = await page.inner_text("span.MNSB3oPV")
             print(f"总作品数量: {expected_works_count}")
 
-            max_retry = 3
+            max_retry = 5
+
+            async def scroll_page(page, scroll_value, delay=random.randint(1000, 1500)):
+                await page.mouse.wheel(0, scroll_value)
+                await page.wait_for_timeout(delay)
+
             while max_retry > 0:
                 current_count = par_jsons(jsons)
                 if current_count >= int(expected_works_count):
                     break
                 previous_height = await page.evaluate("document.body.scrollHeight")
                 await page.evaluate("window.scrollBy(0, window.innerHeight)")
-
                 await page.wait_for_timeout(1000)
+                await page.evaluate(
+                    f"window.scrollBy(window.innerHeight, {int(previous_height) / 4})"
+                )
+                for _ in range(2):
+                    await scroll_page(page, int(previous_height) * 2)
+                    await scroll_page(page, -2000)
                 new_height = await page.evaluate("document.body.scrollHeight")
                 if new_height == previous_height:
                     print("页面高度没有变化，可能已经到底部")
@@ -199,7 +215,22 @@ def save_user_videos_aneme_jsonobjs(
     jsons, douyin_number, name = asyncio.run(
         print_aweme_responses(user_home_url, headless)
     )
-    save_path = Path(f"{data_save_dir}/{name}_{douyin_number}/aweme.json")
+    save_path = Path(
+        f"{data_save_dir}/{re.sub(r'[<>:"/\\|?*]', '', name)}_{re.sub(r'[<>:"/\\|?*]', '', douyin_number)}/aweme.json"
+    )
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(save_path, "w", encoding="UTF-8") as f:
+        json.dump(jsons, f, indent=4, ensure_ascii=False)
+    return jsons, douyin_number, name
+
+
+async def save_user_videos_aneme_jsonobjs_async(
+    user_home_url: str, data_save_dir: str = "data", headless: bool = None
+) -> tuple[str, str, str]:
+    jsons, douyin_number, name = await print_aweme_responses(user_home_url, headless)
+    save_path = Path(
+        f"{data_save_dir}/{re.sub(r'[<>:"/\\|?*]', '', name)}_{re.sub(r'[<>:"/\\|?*]', '', douyin_number)}/aweme.json"
+    )
     save_path.parent.mkdir(parents=True, exist_ok=True)
     with open(save_path, "w", encoding="UTF-8") as f:
         json.dump(jsons, f, indent=4, ensure_ascii=False)

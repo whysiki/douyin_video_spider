@@ -15,7 +15,7 @@ def async_download_retry_decorator(
     retry_times: int = 10,
     sleep_interval_min: int = 1,
     sleep_interval_max: int = 2,
-    reset_session_interval: int = 3,
+    reset_session_interval: int = 2,
 ) -> Callable[..., Coroutine[Any, Any, Any]]:
     """
     Handle function kwargs:
@@ -66,8 +66,8 @@ def async_download_retry_decorator(
                         random.randint(sleep_interval_min, sleep_interval_max)
                     )
 
-                    if (i + 1) % reset_session_interval == 0:
-                        await reset_session(kwargs, func.__name__)
+                    # if (i + 1) % reset_session_interval == 0:
+                        # await reset_session(kwargs, func.__name__)
 
             await handle_retry_limit(kwargs, func.__name__, last_exception)
 
@@ -78,17 +78,22 @@ def async_download_retry_decorator(
     return wrapper2
 
 
-async def reset_session(kwargs: dict, func_name: str) -> None:
-    if "session" in kwargs and isinstance(kwargs["session"], aiohttp.ClientSession):
-        if not kwargs["session"].closed:
-            await kwargs["session"].close()
-        cookies, headers = read_statejson_and_get_cookie_headers()
-        kwargs["session"] = aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(connect=5),
-            # headers=headers,
-            cookies=cookies,
-        )
-        console.print(f"\n{func_name} session has been reset\n", style="bold green")
+# async def reset_session(kwargs: dict, func_name: str) -> None:
+#     if "session" in kwargs and isinstance(kwargs["session"], aiohttp.ClientSession):
+#         if not kwargs["session"].closed:
+#             await kwargs["session"].close()
+#         # session = aiohttp.ClientSession()
+#         # local_addr = random.choice(["10.193.2.171", "192.168.0.103"])
+#         # connector = aiohttp.TCPConnector(local_addr=(local_addr, 0))
+#         connector = None
+#         cookies, headers = read_statejson_and_get_cookie_headers()
+#         kwargs["session"] = aiohttp.ClientSession(
+#             timeout=aiohttp.ClientTimeout(connect=6),
+#             # headers=headers,
+#             cookies=cookies,
+#             connector=connector
+#         )
+#         console.print(f"\n{func_name} session has been reset\n", style="bold green")
 
 
 async def handle_retry_limit(
@@ -107,7 +112,7 @@ async def handle_retry_limit(
     if (
         "session" in kwargs
         and isinstance(kwargs["session"], aiohttp.ClientSession)
-        and not kwargs["session"].closed
+        # and not kwargs["session"].closed
     ):
         await kwargs["session"].close()
         console.print(f"\n{func_name} session has been closed\n", style="bold green")

@@ -17,8 +17,8 @@ logger.add(
 
 # 用户主页链接是抖音用户主页链接, 每行一个链接
 user_home_page_urls_strs = """
-#https://www.douyin.com/user/MS4wLjABAAAAI2E6rxFvVx4Zl-iuLUTw4Z_SR3mDoeWIj38Hady10_M?from_tab_name=main&vid=7430581670090231097
-#https://www.douyin.com/user/MS4wLjABAAAAjDBNeFQqzBbbOuZP1ZOeP4ALuxrBoWH8O0fx9Epetec?from_tab_name=main&vid=7428813867314187555
+https://www.douyin.com/user/MS4wLjABAAAAI2E6rxFvVx4Zl-iuLUTw4Z_SR3mDoeWIj38Hady10_M?from_tab_name=main&vid=7430581670090231097
+https://www.douyin.com/user/MS4wLjABAAAAjDBNeFQqzBbbOuZP1ZOeP4ALuxrBoWH8O0fx9Epetec?from_tab_name=main&vid=7428813867314187555
 https://www.douyin.com/user/MS4wLjABAAAAWxzfIxWGMTIPDv3aD2eiJYnskDyf_dQN-ST5tbpv5M2dorEFfKdayfErIA7sf-yC?from_tab_name=main&vid=7430297272526654756
 """.strip()
 
@@ -56,9 +56,9 @@ async def main():
                 user_home_page_url, data_save_dir=data_dir, headless=True
             )
         )
-    await asyncio.gather(*task1)
+    # await asyncio.gather(*task1)
 
-    # await download_main(data_save_path=data_dir, download_quality=-1, download_num=0)
+    await download_main(data_save_path=data_dir, download_quality=-1, download_num=0)
 
 
 if __name__ == "__main__":

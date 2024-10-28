@@ -15,7 +15,7 @@ from useful_tools import read_statejson_and_get_cookie_headers
 
 @logger.catch
 @async_download_retry_decorator(
-    retry_times=10,
+    retry_times=30,
     sleep_interval_min=5,
     sleep_interval_max=15,
 )
@@ -70,7 +70,7 @@ async def download_file_async(
             # cookies, _ = read_statejson_and_get_cookie_headers()
             session = aiohttp.ClientSession(
                 connector=connector,
-                timeout=aiohttp.ClientTimeout(connect=5),
+                timeout=aiohttp.ClientTimeout(connect=10),
                 # cookies=cookies,
             )
         try:
@@ -221,8 +221,8 @@ async def download_main(
                     break
             if download_num > 0 and download_num_count >= download_num:
                 break
-    # async with asyncio.Semaphore(semaphore_num):
-    await asyncio.gather(*tasks)
+    async with asyncio.Semaphore(5):
+        await asyncio.gather(*tasks)
     if session and isinstance(session, aiohttp.ClientSession) and not session.closed:
         await session.close()
 

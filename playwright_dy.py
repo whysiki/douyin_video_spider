@@ -17,7 +17,7 @@ import random
 async def handle_route_banimg_and_media(route, request):
     if request.resource_type in ["image", "media"]:
         await route.abort()
-        print(f"Blocked: {request.url}")
+        # print(f"Blocked: {request.url}")
         pass
     else:
         await route.continue_()
@@ -29,7 +29,7 @@ async def handle_special_block_urls_keywords(route, request):
         keyword = keyword.strip()
         if keyword in request.url:
             await route.abort()
-            print(f"Blocked: {request.url}")
+            # print(f"Blocked: {request.url}")
             pass
         else:
             await route.continue_()
@@ -79,6 +79,7 @@ async def print_aweme_responses(
                 try:
                     response_json = await response.json()
                     jsons.append(response_json)
+                    print(f"Hooked: {response.url}")
                 except Exception as e:
                     print(f"Error processing response: {e}")
 
@@ -167,9 +168,6 @@ async def print_aweme_responses(
             )
         except Exception as e:
             print(f"Error: {e}")
-            await browser.close()
-            # 确认
-
             if os.path.exists("state.json"):
                 acf = input("是否删除state.json文件然后继续(y/n): ")
                 if acf == "y":

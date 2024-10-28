@@ -67,7 +67,7 @@ def async_download_retry_decorator(
                     )
 
                     # if (i + 1) % reset_session_interval == 0:
-                        # await reset_session(kwargs, func.__name__)
+                    # await reset_session(kwargs, func.__name__)
 
             await handle_retry_limit(kwargs, func.__name__, last_exception)
 
@@ -99,15 +99,15 @@ def async_download_retry_decorator(
 async def handle_retry_limit(
     kwargs: dict, func_name: str, last_exception: Exception
 ) -> None:
-    if "file_save_path" in kwargs and isinstance(kwargs["file_save_path"], (str, Path)):
-        file_path = (
-            Path(kwargs["file_save_path"])
-            if isinstance(kwargs["file_save_path"], str)
-            else kwargs["file_save_path"]
-        )
-        if file_path.exists():
-            logger.error(f"Deleting {file_path.name} because of reached retry limit")
-            file_path.unlink()
+    # if "file_save_path" in kwargs and isinstance(kwargs["file_save_path"], (str, Path)):
+    #     file_path = (
+    #         Path(kwargs["file_save_path"])
+    #         if isinstance(kwargs["file_save_path"], str)
+    #         else kwargs["file_save_path"]
+    #     )
+    #     if file_path.exists():
+    #         logger.error(f"Deleting {file_path.name} because of reached retry limit")
+    #         file_path.unlink()
 
     if (
         "session" in kwargs

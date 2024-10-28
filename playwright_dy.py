@@ -24,10 +24,10 @@ async def handle_route_banimg_and_media(route, request):
 
 
 async def handle_special_block_urls_keywords(route, request):
-    block_urls_keywords = ["lf-douyin-pc-web", "If9-sec"]
-    #
+    block_urls_keywords = ["lf-douyin-pc-web", "If9-sec", "bytetos"]
     for keyword in block_urls_keywords:
-        if keyword.split() in request.url:
+        keyword = keyword.strip()
+        if keyword in request.url:
             await route.abort()
             print(f"Blocked: {request.url}")
             pass
@@ -42,19 +42,19 @@ async def print_aweme_responses(
         isloaded = True if os.path.exists("state.json") else False
         # headless=False 会打开浏览器
         # headless=True 不会打开浏览器
-        browser = await p.firefox.launch(
+        browser = await p.chromium.launch(
             headless=(
                 headless if headless is not None else (True if isloaded else False)
             ),
             args=[
-                # "--incognito",  # 隐身模式
-                # "--disable-gpu",  # 禁用 GPU 硬件加速
+                "--incognito",  # 隐身模式
+                "--disable-gpu",  # 禁用 GPU 硬件加速
                 # "--no-sandbox",  # 禁用沙盒
                 # "--remote-debugging-port=9222",  # 启用远程调试
                 # "--window-size=1280,800",  # 设置窗口大小
                 # firefox 配置
                 # "-foreground",  # 前台运行
-                "-private",  # 隐身模式
+                # "-private",  # 隐身模式
                 # "-headless",  # 无头模式
             ],
             # devtools=True,
@@ -69,10 +69,7 @@ async def print_aweme_responses(
         page = await context.new_page()
 
         if isloaded:
-            await page.route(
-                "**/*", handle_special_block_urls_keywords
-            )  # Union[Callable[[Route, Request], Any], Callable[[Route], Any]]
-            # await page.route("**/*", handle_route_banimg_and_media)
+            await page.route("**/*", handle_special_block_urls_keywords)
             await page.route("**/*", handle_route_banimg_and_media)
             pass
         jsons = []
@@ -108,8 +105,6 @@ async def print_aweme_responses(
 
             print("登录成功")
 
-            # await context.storage_state(path="state.json")
-
             # 获取抖音号 正则匹配
             await page.wait_for_selector(
                 "#douyin-right-container > div.parent-route-container.route-scroll-container"
@@ -141,36 +136,27 @@ async def print_aweme_responses(
             await page.wait_for_selector("span.MNSB3oPV")
             expected_works_count = await page.inner_text("span.MNSB3oPV")
             print(f"总作品数量: {expected_works_count}")
-
-            max_retry = 5
-
-            async def scroll_page(page, scroll_value, delay=random.randint(1000, 1500)):
-                await page.mouse.wheel(0, scroll_value)
-                await page.wait_for_timeout(delay)
-
-            while max_retry > 0:
-                current_count = par_jsons(jsons)
-                if current_count >= int(expected_works_count):
-                    break
-                previous_height = await page.evaluate("document.body.scrollHeight")
-                await page.evaluate("window.scrollBy(0, window.innerHeight)")
-                await page.wait_for_timeout(1000)
-                await page.evaluate(
-                    f"window.scrollBy(window.innerHeight, {int(previous_height) / 4})"
+            while True:
+                scroll_div_li_list = await page.query_selector_all(
+                    "#douyin-right-container > div.parent-route-container.route-scroll-container.IhmVuo1S > div > div > div > div.XA9ZQ2av > div > div > div.z_YvCWYy.Klp5EcJu > div.N8dcwU0m > div.pCVdP6Bb > ul > li"
                 )
-                for _ in range(2):
-                    await scroll_page(page, int(previous_height) * 2)
-                    await scroll_page(page, -2000)
-                new_height = await page.evaluate("document.body.scrollHeight")
-                if new_height == previous_height:
-                    print("页面高度没有变化，可能已经到底部")
+                if scroll_div_li_list:
+                    last_li = scroll_div_li_list[-1]
+                    await last_li.scroll_into_view_if_needed()
+                    print("滚动页面 scroll_div_li_list[-1]")
+                end_tag = page.locator(
+                    "div.gqga5U3W > div.E5QmyeTo", has_text="暂时没有更多了"
+                )
+                current_count = par_jsons(jsons)
+                if await end_tag.is_visible():
+                    print("没有更多了")
+                    break
+                if current_count >= int(expected_works_count):
+                    print("当前作品数量已经达到总作品数量")
+                    break
                 print(
                     f"当前读取作品数量: {current_count}，总作品数量: {expected_works_count}"
                 )
-                print(
-                    f"如果当前作品数量不再增加，请手动滚动页面, 剩余重试次数: {max_retry}"
-                )
-                max_retry -= 1
             await context.storage_state(path="state.json")
 
             await browser.close()

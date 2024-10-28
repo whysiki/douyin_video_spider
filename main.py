@@ -58,7 +58,7 @@ async def main():
         )
     await asyncio.gather(*task1)
 
-    await download_main(data_save_path=data_dir, download_quality=-1, download_num=0)
+    # await download_main(data_save_path=data_dir, download_quality=-1, download_num=0)
 
 
 if __name__ == "__main__":

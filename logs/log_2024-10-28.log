@@ -1,0 +1,26 @@
+2024-10-28 15:29:10.206 | INFO     | download_videos:download_main:148 - loading aweme json data: testdata/小艾根本吃不饱！！_499/aweme.json
+2024-10-28 15:29:10.223 | INFO     | download_videos:download_main:170 - 视频id:7418240498332175650, 点赞数: 279847, nickname: 小泽由美子
+2024-10-28 15:29:10.224 | INFO     | download_videos:download_cover:273 - added cover_url download task: https://p9-pc-sign.douyinpic.com/obj/tos-cn-p-0015/oIviZAAIBXi3ALzy5CPEIXoqgcAM4Uivn7vQ1?x-expires=2045458800&x-signature=1MXbSiL4Gi3K8Hqyi2e2nsEMRIE%3D&from=327834062&s=PackSourceEnum_PUBLISH&se=false&sc=cover&biz_tag=pcweb_cover&l=202410281529017E7AB5B69CB4FA14BA27
+2024-10-28 15:29:10.225 | INFO     | download_videos:download_video:322 - added play_addr_url download task: https://www.douyin.com/aweme/v1/play/?video_id=v0200fg10000crpe4knog65re5t9e010&line=0&file_id=edb37abeb0fc4dcf9f08ffbe339758b3&sign=caf081dd08c96f68802086d6eac78291&is_play_url=1&source=PackSourceEnum_PUBLISH
+2024-10-28 15:29:10.226 | INFO     | download_videos:download_music:371 - added music_uri download task: https://sf3-cdn-tos.douyinstatic.com/obj/ies-music/7389357276580170534.mp3
+2024-10-28 15:29:10.226 | INFO     | download_videos:download_main:198 - download_num_count: 1
+2024-10-28 15:29:10.227 | INFO     | download_videos:download_main:170 - 视频id:7192175844570320185, 点赞数: 41992, nickname: 小泽由美子
+2024-10-28 15:29:10.228 | INFO     | download_videos:download_cover:273 - added cover_url download task: https://p9-pc-sign.douyinpic.com/obj/tos-cn-p-0015/1041e9601a1d4e92b07adf6b5e3349a5_1674558943?x-expires=2045458800&x-signature=hVnMZJap%2FVI1ZiMtu84R4nX4EXI%3D&from=327834062&s=PackSourceEnum_PUBLISH&se=false&sc=cover&biz_tag=pcweb_cover&l=202410281529017E7AB5B69CB4FA14BA27
+2024-10-28 15:29:10.228 | INFO     | download_videos:download_video:322 - added play_addr_url download task: https://www.douyin.com/aweme/v1/play/?video_id=v0200fg10000cf7roj3c77ueqcqa12i0&line=0&file_id=9f4d46f41e8348a089518ee152359f13&sign=39599d17bdab2859d22e38f7083af598&is_play_url=1&source=PackSourceEnum_PUBLISH
+2024-10-28 15:29:10.229 | INFO     | download_videos:download_music:371 - added music_uri download task: https://sf5-hl-cdn-tos.douyinstatic.com/obj/ies-music/7184309777617570620.mp3
+2024-10-28 15:29:10.229 | INFO     | download_videos:download_main:198 - download_num_count: 2
+2024-10-28 15:29:10.230 | INFO     | download_videos:download_main:170 - 视频id:7209136093189377332, 点赞数: 77252, nickname: 小泽由美子
+2024-10-28 15:29:10.231 | INFO     | download_videos:download_cover:273 - added cover_url download task: https://p9-pc-sign.douyinpic.com/obj/tos-cn-p-0015/96c6c6c992b541379c4f4e8b17a245eb_1678507809?x-expires=2045458800&x-signature=sAFy2L43lc%2FYk3gfE%2FMO2Nczc7c%3D&from=327834062&s=PackSourceEnum_PUBLISH&se=false&sc=cover&biz_tag=pcweb_cover&l=202410281529017E7AB5B69CB4FA14BA27
+2024-10-28 15:29:10.231 | INFO     | download_videos:download_video:322 - added play_addr_url download task: https://www.douyin.com/aweme/v1/play/?video_id=v0d00fg10000cg5vt63c77u9jf4i15h0&line=0&file_id=c1e62e1eb39e4a06b69734578eac7815&sign=3614fb1926f9f403820841a5c588f57a&is_play_url=1&source=PackSourceEnum_PUBLISH
+2024-10-28 15:29:10.231 | INFO     | download_videos:download_music:371 - added music_uri download task: https://sf3-cdn-tos.douyinstatic.com/obj/ies-music/7200238662557256504.mp3
+2024-10-28 15:29:10.232 | INFO     | download_videos:download_main:198 - download_num_count: 3
+2024-10-28 15:29:10.232 | SUCCESS  | download_videos:download_main:200 - download_num_count: 3 == 3
+2024-10-28 15:29:10.630 | SUCCESS  | download_videos:download_file_async:107 - Downloaded #原相机 #对镜拍 #天秤座 那我可随便发了.mp3 to testdata/小艾根本吃不饱！！_499/#原相机 #对镜拍 #天秤座 那我可随便发了-7192175844570320185-4.2W/mp3
+2024-10-28 15:29:10.720 | SUCCESS  | download_videos:download_file_async:107 - Downloaded cover.jpg to testdata/小艾根本吃不饱！！_499/总是能让我喜欢的人越来越不喜欢我-7418240498332175650-28.0W/cover
+2024-10-28 15:29:11.007 | SUCCESS  | download_videos:download_file_async:107 - Downloaded cover.jpg to testdata/小艾根本吃不饱！！_499/#原相机 #对镜拍 #天秤座 那我可随便发了-7192175844570320185-4.2W/cover
+2024-10-28 15:29:11.139 | SUCCESS  | download_videos:download_file_async:107 - Downloaded cover.jpg to testdata/小艾根本吃不饱！！_499/爱就跟我走@小泽由美 #天秤座 #感觉至上-7209136093189377332-7.7W/cover
+2024-10-28 15:29:11.428 | SUCCESS  | download_videos:download_file_async:107 - Downloaded 爱就跟我走@小泽由美 #天秤座 #感觉至上.mp3 to testdata/小艾根本吃不饱！！_499/爱就跟我走@小泽由美 #天秤座 #感觉至上-7209136093189377332-7.7W/mp3
+2024-10-28 15:29:11.468 | SUCCESS  | download_videos:download_file_async:107 - Downloaded 总是能让我喜欢的人越来越不喜欢我.mp3 to testdata/小艾根本吃不饱！！_499/总是能让我喜欢的人越来越不喜欢我-7418240498332175650-28.0W/mp3
+2024-10-28 15:29:12.218 | SUCCESS  | download_videos:download_file_async:107 - Downloaded #原相机 #对镜拍 #天秤座 那我可随便发了.mp4 to testdata/小艾根本吃不饱！！_499/#原相机 #对镜拍 #天秤座 那我可随便发了-7192175844570320185-4.2W/video
+2024-10-28 15:29:12.946 | SUCCESS  | download_videos:download_file_async:107 - Downloaded 总是能让我喜欢的人越来越不喜欢我.mp4 to testdata/小艾根本吃不饱！！_499/总是能让我喜欢的人越来越不喜欢我-7418240498332175650-28.0W/video
+2024-10-28 15:29:14.807 | SUCCESS  | download_videos:download_file_async:107 - Downloaded 爱就跟我走@小泽由美 #天秤座 #感觉至上.mp4 to testdata/小艾根本吃不饱！！_499/爱就跟我走@小泽由美 #天秤座 #感觉至上-7209136093189377332-7.7W/video

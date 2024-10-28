@@ -1,97 +1,28 @@
-import os
 import json
-import requests
 import re
 from pathlib import Path
 import aiohttp
 from rich import print
 from loguru import logger
 from tqdm import tqdm
-from rich.console import Console
-from functools import wraps, lru_cache
 import asyncio
-import random
 from fake_useragent import UserAgent
+from useful_decorators import async_download_retry_decorator
+from useful_tools import sanitize_filename, format_digg_count
 
 
-def sanitize_filename(filename: str):
-    assert isinstance(filename, str), "filename must be a string"
-    filename = filename.replace("\n", "").replace("\r", "")
-    return re.sub(r'[\/:*?"<>|]', "_", filename)
-
-
-def async_download_retry_decorator(func):
-    @wraps(func)
-    async def wrapper(*args, **kwargs):
-        last_exception = None
-        retry_times = 20
-        for i in range(retry_times):
-            try:
-                return await func(*args, **kwargs)
-            except AssertionError as e:
-                Console().print(
-                    f"\nYou have an assertion error: {str(e)}\n", style="bold red"
-                )
-                raise e
-            except Exception as e:
-                last_exception = e
-                Console().print(
-                    f"\nError type: {type(e)}: {str(e)}\n", style="bold red"
-                )
-                Console().print(
-                    f"\nRetrying {func.__name__} for the {i+1}/{retry_times} time\n",
-                    style="bold yellow",
-                )
-                await asyncio.sleep(random.randint(1, 5))
-
-                if (i + 1) % 3 == 0:  # 重置session,三次重试一次
-                    if kwargs and "session" in kwargs:
-                        if (
-                            isinstance(kwargs["session"], aiohttp.ClientSession)
-                            and not kwargs["session"].closed
-                        ):
-                            await kwargs["session"].close()
-                        kwargs["session"] = aiohttp.ClientSession()
-                        Console().print(
-                            f"\n{func.__name__} session has been reset\n",
-                            style="bold green",
-                        )
-        if (
-            kwargs
-            and "file_save_path" in kwargs
-            and isinstance(kwargs["file_save_path"], (str, Path))
-        ):
-            file_path = (
-                Path(kwargs["file_save_path"])
-                if isinstance(kwargs["file_save_path"], str)
-                else kwargs["file_save_path"]
-            )
-            if file_path.exists():
-                logger.error(
-                    f"Deleting {file_path.name} because of reached retry limit"
-                )
-                file_path.unlink()
-        if (
-            kwargs
-            and "session" in kwargs
-            and isinstance(kwargs["session"], aiohttp.ClientSession)
-        ) and not kwargs["session"].closed:
-            await kwargs["session"].close()
-            Console().print(
-                f"\n{func.__name__} session has been closed\n", style="bold green"
-            )
-        # raise last_exception
-        logger.error(f"Reached retry limit: {last_exception}")
-
-    return wrapper
-
-
-@async_download_retry_decorator
+@logger.catch
+@async_download_retry_decorator(
+    retry_times=6,
+    sleep_interval_min=1,
+    sleep_interval_max=5,
+    reset_session_interval=2,
+)
 async def download_file_async(
     url: str,
     file_save_path: str | Path,
     headers: dict = None,
-    mix_size: int = 250,
+    mix_size: int = 512,
     session: aiohttp.ClientSession = None,
 ):
     headers = (
@@ -130,12 +61,23 @@ async def download_file_async(
         connector = None
         session = aiohttp.ClientSession(connector=connector)
     try:
-        async with session.get(url, headers={**headers, **resume_header}) as response:
+        async with session.get(
+            url, headers={**headers, **resume_header}, timeout=5
+        ) as response:
             total_size = (
                 int(response.headers.get("content-length", 0)) + existing_file_size
             )
+            # 检查是否是媒体文件
+            content_type = response.headers.get("content-type", "")
+            if not re.match(r"^video|audio|image", content_type):
+                logger.warning(
+                    f"Content type is not video/audio/image, is this the correct file? {url} {content_type}"
+                )
+                raise ValueError(
+                    f"Content type is not video/audio/image, is this the correct file? {url} {content_type}"
+                )
             if total_size <= mix_size:
-                logger.error(
+                logger.warning(
                     f"File size too small, is this the correct file? {url} {total_size}"
                 )
                 raise ValueError(
@@ -153,7 +95,8 @@ async def download_file_async(
             )
             with open(file_save_path, file_mode) as file:
                 while True:
-                    chunk = await response.content.read(8192)
+                    chunk = await response.content.read(1024)
+                    logger.debug(f"chunk size: {len(chunk)}")
                     if not chunk:
                         break
                     downloaded_size = file.write(chunk)
@@ -177,18 +120,12 @@ async def download_file_async(
     return total_size
 
 
-def format_digg_count(digg_count: int | float) -> str:
-    assert isinstance(
-        digg_count, (int, float)
-    ), "digg_count must be an integer or float"
-    return f"{digg_count / 10000:.1f}W" if digg_count >= 10000 else str(digg_count)
-
-
 @logger.catch
 async def download_main(
     data_save_path: str | Path = "data",
     download_quality: int | None = None,
     download_num: int = 0,
+    semaphore_num: int = 3,
 ):
     assert isinstance(
         download_quality, (int, type(None))
@@ -201,7 +138,9 @@ async def download_main(
     )
     json_files_generator = base_path.glob("**/*.json")
 
-    session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=600))
+    session = aiohttp.ClientSession(
+        timeout=aiohttp.ClientTimeout(connect=5)
+    )  # 如果5秒内没有连接成功, 则超时
     tasks = []
     download_num_count = 0
 
@@ -264,12 +203,12 @@ async def download_main(
                     break
             if download_num > 0 and download_num_count >= download_num:
                 break
-    await asyncio.gather(*tasks)
+    async with asyncio.Semaphore(semaphore_num):
+        await asyncio.gather(*tasks)
     if session and isinstance(session, aiohttp.ClientSession) and not session.closed:
         await session.close()
 
-    print("\n\nDownload finished\n\n", style="bold green")
-    # Console().print("Download finished", style="bold green")
+    print("[green]\n\nAll download tasks are completed\n[/green]")
 
 
 async def add_download_tasks(

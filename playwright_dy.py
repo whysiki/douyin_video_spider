@@ -15,19 +15,21 @@ from functools import lru_cache
 
 async def handle_route_banimg_and_media(route, request):
     if request.resource_type in ["image", "media"]:
-        await route.abort()
+        # await route.abort()
+        # print(f"Blocked: {request.url}")
+        pass
     else:
         await route.continue_()
 
 
 async def handle_special_block_urls_keywords(route, request):
-    block_urls_keywords = ["lf-douyin-pc-web.douyinstatic.com"]
+    block_urls_keywords = ["lf-douyin-pc-web.douyinstatic.com", "If9-sec.bytetos.com"]
     #
     for keyword in block_urls_keywords:
         if keyword in request.url:
-            await route.abort()
+            # await route.abort()
             # print(f"Blocked: {request.url}")
-            # await route.continue_()
+            pass
         else:
             await route.continue_()
 
@@ -85,6 +87,13 @@ async def print_aweme_responses(
             "response", lambda response: asyncio.create_task(handle_response(response))
         )
         try:
+            print("正在打开抖音主页")
+            await page.goto(
+                "https://www.douyin.com/",
+                timeout=10000 * 1000,
+                wait_until="domcontentloaded",
+            )
+            print("正在打开用户主页")
             await page.goto(
                 user_home_url, wait_until="domcontentloaded", timeout=10000 * 1000
             )
@@ -94,6 +103,8 @@ async def print_aweme_responses(
                     "div > div:nth-child(8) > div > a > span > img",
                     timeout=10000 * 1000,
                 )
+
+            print("登录成功")
 
             await context.storage_state(path="state.json")
 

@@ -4,7 +4,7 @@ from playwright_dy import (
 )
 import asyncio
 from loguru import logger
-import shutil  # 用于删除文件夹
+import shutil
 import time
 from rich import print
 

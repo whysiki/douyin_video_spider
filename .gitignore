@@ -13,3 +13,4 @@ __pycache__/playwright.cpython-312.pyc
 **/*.pyc
 **/*.pyc
 **/*.log
+/state

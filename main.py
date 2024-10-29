@@ -40,12 +40,18 @@ user_home_page_urls = list(
 # - - - - cover
 
 # 删除之前的数据
-shutil.rmtree("datatest", ignore_errors=True)
+# shutil.rmtree("datatest", ignore_errors=True)
 data_dir = "datatest"
 if __name__ == "__main__":
+    # 保存用户视频信息,如果用户视频信息已经保存过,注释掉这行代码，直接下载视频
     return_datas = asyncio.run(
         save_user_videos_aneme_jsonobjs_async(
             user_home_page_urls, data_dir  # , headless=True
         )
     )
-    print(return_datas)
+    # print(return_datas)
+    # 下载视频
+    asyncio.run(
+        download_main(data_save_path=data_dir, download_quality=-1, download_num=0)
+    )
+    # -1表示下载最高清晰度，0表示下载所有视频

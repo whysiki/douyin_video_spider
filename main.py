@@ -1,15 +1,15 @@
 from download_videos import download_main
 from playwright_dy import (
-    save_user_videos_aneme_jsonobjs,
     save_user_videos_aneme_jsonobjs_async,
 )
 import asyncio
 from loguru import logger
 import shutil  # 用于删除文件夹
 import time
+from rich import print
 
 logger.add(
-    f"logs/log1_{time.strftime('%Y-%m-%d', time.localtime())}.log",
+    f"logs/log_{time.strftime('%Y-%m-%d', time.localtime())}.log",
     rotation="10 MB",
     retention="10 days",
     level="INFO",
@@ -40,30 +40,36 @@ user_home_page_urls = list(
 # - - - - cover
 
 # 删除之前的数据
-# shutil.rmtree("data", ignore_errors=True)
-data_dir = "data"
+shutil.rmtree("datatest", ignore_errors=True)
+data_dir = "datatest"
 
 
-logger.catch
+# logger.catch()
 
 
-async def main():
-    task1 = []
-    # task2= []
-    for user_home_page_url in user_home_page_urls:
-        task1.append(
-            save_user_videos_aneme_jsonobjs_async(
-                user_home_page_url, data_save_dir=data_dir, headless=True
-            )
-        )
-    # await asyncio.gather(*task1)
+# async def main():
+#     task1 = []
+#     for user_home_page_url in user_home_page_urls:
+#         task1.append(
+#             save_user_videos_aneme_jsonobjs_async(
+#                 user_home_page_url, data_save_dir=data_dir
+#             )
+#         )
+#     await asyncio.gather(*task1)
 
-    await download_main(data_save_path=data_dir, download_quality=-1, download_num=0)
+# await download_main(data_save_path=data_dir, download_quality=-1, download_num=0)
 
 
 if __name__ == "__main__":
-
-    asyncio.run(main())
+    return_datas = asyncio.run(
+        save_user_videos_aneme_jsonobjs_async(
+            user_home_page_urls, data_dir, headless=True
+        )
+    )
+    print(return_datas)
+    # asyncio.run(
+    #     download_main(data_save_path=data_dir, download_quality=-1, download_num=0)
+    # )
 
 # for user_home_page_url in user_home_page_urls:
 #     save_user_videos_aneme_jsonobjs(

@@ -11,33 +11,23 @@ from useful_tools import read_statejson_and_get_cookie_headers
 console = Console()
 
 
+def semaphore_decorator(semaphore: asyncio.Semaphore = asyncio.Semaphore(10)):
+    def semaphore_decorator_wrapper(func):
+        async def wrapper(*args, **kwargs):
+            async with semaphore:
+                return await func(*args, **kwargs)
+
+        return wrapper
+
+    return semaphore_decorator_wrapper
+
+
 def async_download_retry_decorator(
     retry_times: int = 10,
     sleep_interval_min: int = 1,
     sleep_interval_max: int = 2,
     reset_session_interval: int = 2,
 ) -> Callable[..., Coroutine[Any, Any, Any]]:
-    """
-    Handle function kwargs:
-
-    - session: aiohttp.ClientSession, if the function reset_session_interval reached, it will close the session and create a new one.
-
-    - file_save_path: Union[str, Path], if the function reached the retry limit, it will delete the file.
-
-    Attention:
-
-    - If the function raises an AssertionError, it will not retry.
-
-    Args:
-        retry_times (int, optional): _description_. Defaults to 10.
-        sleep_interval_min (int, optional): _description_. Defaults to 1.
-        sleep_interval_max (int, optional): _description_. Defaults to 2.
-        reset_session_interval (int, optional): _description_. Defaults to 3.
-    Returns:
-        Callable[..., Coroutine[Any, Any, Any]]: _description_
-
-    """
-
     def wrapper2(
         func: Callable[..., Coroutine[Any, Any, Any]]
     ) -> Callable[..., Coroutine[Any, Any, Any]]:

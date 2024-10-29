@@ -1,9 +1,0 @@
-2024-10-29 20:04:23.619 | INFO     | playwright_dy:print_aweme_responses:213 - 正在打开抖音主页
-2024-10-29 20:04:30.313 | INFO     | playwright_dy:parse_home_page:143 - 抖音号: 89022450416
-2024-10-29 20:04:30.313 | INFO     | playwright_dy:parse_home_page:144 - 用户昵称: 万万🎥
-2024-10-29 20:04:30.314 | INFO     | playwright_dy:parse_home_page:145 - 总作品数量: 218
-2024-10-29 20:04:30.335 | INFO     | playwright_dy:parse_home_page:143 - 抖音号: xiaoai499
-2024-10-29 20:04:30.336 | INFO     | playwright_dy:parse_home_page:144 - 用户昵称: 小艾根本吃不饱！！
-2024-10-29 20:04:30.338 | INFO     | playwright_dy:parse_home_page:145 - 总作品数量: 473
-2024-10-29 20:04:55.197 | SUCCESS  | playwright_dy:save_user_videos_aneme_jsonobjs_async:170 - 抖音万万🎥_89022450416,保存视频anemejsonlist数据到: datatest/万万🎥_89022450416/aweme.json
-2024-10-29 20:04:55.604 | SUCCESS  | playwright_dy:save_user_videos_aneme_jsonobjs_async:170 - 抖音小艾根本吃不饱！！_xiaoai499,保存视频anemejsonlist数据到: datatest/小艾根本吃不饱！！_xiaoai499/aweme.json

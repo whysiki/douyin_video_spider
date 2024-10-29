@@ -42,24 +42,6 @@ user_home_page_urls = list(
 # 删除之前的数据
 shutil.rmtree("datatest", ignore_errors=True)
 data_dir = "datatest"
-
-
-# logger.catch()
-
-
-# async def main():
-#     task1 = []
-#     for user_home_page_url in user_home_page_urls:
-#         task1.append(
-#             save_user_videos_aneme_jsonobjs_async(
-#                 user_home_page_url, data_save_dir=data_dir
-#             )
-#         )
-#     await asyncio.gather(*task1)
-
-# await download_main(data_save_path=data_dir, download_quality=-1, download_num=0)
-
-
 if __name__ == "__main__":
     return_datas = asyncio.run(
         save_user_videos_aneme_jsonobjs_async(
@@ -67,14 +49,3 @@ if __name__ == "__main__":
         )
     )
     print(return_datas)
-    # asyncio.run(
-    #     download_main(data_save_path=data_dir, download_quality=-1, download_num=0)
-    # )
-
-# for user_home_page_url in user_home_page_urls:
-#     save_user_videos_aneme_jsonobjs(
-#         user_home_page_url, data_save_dir=data_dir, headless=False
-#     )
-#     asyncio.run(
-#         download_main(data_save_path=data_dir, download_quality=-1, download_num=0)
-#     )  # -1 代表最好的质量
